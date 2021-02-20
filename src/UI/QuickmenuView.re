@@ -4,6 +4,8 @@ open Oni_Core;
 open Oni_Model;
 open Oni_Components;
 
+module Log = (val Oni_Core.Log.withNamespace("Oni2.QuickMenu.Test"));
+
 module Colors = Feature_Theme.Colors;
 
 module Clickable = Revery.UI.Components.Clickable;

@@ -725,6 +725,15 @@ let update =
         }
       );
     (state, eff);
+  
+  | AddToHistory(v) => { 
+    //TODO: MAKE IT CONFIGURABLE
+    let history = switch (Array.length(state.history)) {
+    | 50 => Array.sub(state.history, Array.length(state.history) - 1, 1)
+    | _ => state.history
+    };
+    let state = {...state, history: Array.append(v |> Array.make(1), history) };
+    (state, Isolinear.Effect.none);}
 
   | Pane(msg) =>
     let (model, outmsg) =

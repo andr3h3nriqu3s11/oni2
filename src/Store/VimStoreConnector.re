@@ -488,6 +488,7 @@ let start =
 
   let checkCommandLineCompletions = (~text: string, ~position: int) => {
     Log.debug("checkCommandLineCompletions");
+    Log.debug("teste4");
 
     if (position == String.length(text) && !StringEx.isEmpty(text)) {
       let context = Oni_Model.VimContext.current(getState());
@@ -657,7 +658,9 @@ let start =
       ignore(Vim.Buffer.openFile(filename): Vim.Buffer.t);
     });
 
-  let applyCompletionEffect = completion =>
+  let applyCompletionEffect = completion => {
+    Log.debug("teste3");
+    Log.debug(completion);
     Isolinear.Effect.create(~name="vim.applyCommandlineCompletion", () =>
       switch (lastCompletionMeet^) {
       | None => ()
@@ -681,6 +684,7 @@ let start =
         isCompleting := false;
       }
     );
+    }
 
   let copyActiveFilepathToClipboardEffect =
     Isolinear.Effect.create(~name="vim.copyActiveFilepathToClipboard", () =>

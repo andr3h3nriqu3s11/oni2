@@ -1,5 +1,7 @@
 open Oni_Core;
 
+module Log = (val Log.withNamespace("InputText.Model"));
+
 [@deriving show]
 type msg =
   | GainedFocus
@@ -206,6 +208,8 @@ module Internal = {
   };
 
   let handleInput = (~text, ~selection: Selection.t, key) => {
+    Log.debug("teste2");
+    Log.debug(key);
     switch (key, Selection.isCollapsed(selection)) {
     // Arrow keys
     | ("<LEFT>", true) => (

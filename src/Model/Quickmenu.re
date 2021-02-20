@@ -39,13 +39,18 @@ let placeholderText =
   | CommandPalette => "type to search..."
   | _ => "";
 
-let defaults = variant => {
+let itemSelector = (history: option(array(menuItem))) => switch history {
+  | Some(array) => array 
+  | _ => [||];
+};
+
+let defaults = (variant, history: option(array(menuItem))) => {
   variant,
   prefix: None,
   inputText:
     Component_InputText.create(~placeholder=placeholderText(variant)),
   focused: None,
-  items: [||],
+  items: itemSelector(history),
   filterProgress: Complete,
   ripgrepProgress: Complete,
 };
