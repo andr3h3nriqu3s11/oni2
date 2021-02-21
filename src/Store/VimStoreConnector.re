@@ -627,6 +627,7 @@ let start =
 
         let context = Oni_Model.VimContext.current(state);
         let previousBufferId = context.bufferId;
+        let previousMode = context.mode
 
         currentTriggerKey := Some(key);
         let ({mode, bufferId, subMode, _}: Vim.Context.t, effects) =
@@ -636,6 +637,24 @@ let start =
         // If we switched buffer, open it in current editor
         if (previousBufferId != bufferId) {
           dispatch(Actions.OpenBufferById({bufferId, direction: `Current}));
+        };
+        
+        Log.debug("teste 10:" ++ string_of_int(List.length(effects)))
+        let checkForEffect = (prefix, text) => switch (List.length(effects)) {
+        | 0 => Log.debug("efectless command: " ++ prefix ++ text)
+        | _ => Log.debug("command: " ++ prefix ++ text)
+        }; 
+        switch mode {
+        | CommandLine(_) => ()
+        | _ => switch previousMode {
+          | CommandLine(v) => switch v.commandType {
+            | Ex => checkForEffect(":", v.text)
+            | SearchForward => checkForEffect("/", v.text)
+            | SearchReverse => checkForEffect("?", v.text)
+            | _ => ()
+          };
+          | _ => ()
+          }
         };
 
         updateActiveEditorMode(subMode, mode, effects);
