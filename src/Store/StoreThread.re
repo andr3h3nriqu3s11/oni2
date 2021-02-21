@@ -8,6 +8,7 @@
  */
 
 module Core = Oni_Core;
+module FpExp = Oni_Core.FpExp;
 
 module Model = Oni_Model;
 
@@ -23,7 +24,7 @@ let discoverExtensions =
       Core.Log.perf("Discover extensions", () => {
         let extensions =
           setup.bundledExtensionsPath
-          |> Fp.absoluteCurrentPlatform
+          |> FpExp.absoluteCurrentPlatform
           |> Option.map(
                Scanner.scan(
                  // The extension host assumes bundled extensions start with 'vscode.'
@@ -34,7 +35,7 @@ let discoverExtensions =
 
         let developmentExtensions =
           setup.developmentExtensionsPath
-          |> Core.Utility.OptionEx.flatMap(Fp.absoluteCurrentPlatform)
+          |> Core.Utility.OptionEx.flatMap(FpExp.absoluteCurrentPlatform)
           |> Option.map(Scanner.scan(~category=Development))
           |> Option.value(~default=[]);
 
@@ -253,7 +254,7 @@ let start =
             ~grammarInfo,
             ~languageInfo,
             ~setup,
-            ~tokenTheme=state.tokenTheme,
+            ~tokenTheme=state.colorTheme |> Feature_Theme.tokenColors,
             ~bufferVisibility=visibleRanges,
             state.syntaxHighlights,
           )
@@ -349,7 +350,7 @@ let start =
         ~toMsg=maybeFilePathStr => {
           let maybeFilePath =
             maybeFilePathStr
-            |> Utility.OptionEx.flatMap(Fp.absoluteCurrentPlatform);
+            |> Utility.OptionEx.flatMap(FpExp.absoluteCurrentPlatform);
           Model.Actions.FileExplorer(
             Feature_Explorer.Msg.activeFileChanged(maybeFilePath),
           );
@@ -444,6 +445,14 @@ let start =
       |> Feature_Buffers.sub
       |> Isolinear.Sub.map(msg => Model.Actions.Buffers(msg));
 
+    let getThemeContribution = themeId =>
+      Feature_Extensions.themeById(~id=themeId, state.extensions);
+
+    let themeSub =
+      state.colorTheme
+      |> Feature_Theme.sub(~getThemeContribution)
+      |> Isolinear.Sub.map(msg => Model.Actions.Theme(msg));
+
     [
       menuBarSub,
       extHostSubscription,
@@ -463,6 +472,7 @@ let start =
       inputSubscription,
       notificationSub,
       bufferSub,
+      themeSub,
     ]
     |> Isolinear.Sub.batch;
   };

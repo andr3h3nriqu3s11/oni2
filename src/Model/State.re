@@ -408,8 +408,6 @@ type t = {
   uiFont: UiFont.t,
   quickmenu: option(Quickmenu.t),
   sideBar: Feature_SideBar.model,
-  // Token theme is theming for syntax highlights
-  tokenTheme: TokenTheme.t,
   extensions: Feature_Extensions.model,
   exthost: Feature_Exthost.model,
   iconTheme: IconTheme.t,
@@ -478,6 +476,7 @@ let initial =
         Feature_SideBar.Contributions.configuration,
         Feature_Syntax.Contributions.configuration,
         Feature_Terminal.Contributions.configuration,
+        Feature_Theme.Contributions.configuration,
         Feature_LanguageSupport.Contributions.configuration,
         Feature_Layout.Contributions.configuration,
         Feature_TitleBar.Contributions.configuration,
@@ -535,7 +534,6 @@ let initial =
     messages: Feature_Messages.initial,
     uiFont: UiFont.default,
     sideBar: Feature_SideBar.initial,
-    tokenTheme: TokenTheme.empty,
     help: Feature_Help.initial,
     iconTheme: IconTheme.create(),
     isQuitting: false,
@@ -561,7 +559,7 @@ let initial =
     titlebarHeight,
     workspace:
       Feature_Workspace.initial(
-        ~openedFolder=maybeWorkspace |> Option.map(Fp.toString),
+        ~openedFolder=maybeWorkspace |> Option.map(FpExp.toString),
         workingDirectory,
       ),
     fileExplorer: Feature_Explorer.initial(~rootPath=maybeWorkspace),

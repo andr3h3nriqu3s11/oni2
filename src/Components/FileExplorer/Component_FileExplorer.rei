@@ -7,14 +7,14 @@ type msg;
 
 module Msg: {
   let keyPressed: string => msg;
-  let activeFileChanged: option(Fp.t(Fp.absolute)) => msg;
+  let activeFileChanged: option(FpExp.t(FpExp.absolute)) => msg;
 };
 
 type model;
 
-let initial: (~rootPath: Fp.t(Fp.absolute)) => model;
-let setRoot: (~rootPath: Fp.t(Fp.absolute), model) => model;
-let root: model => Fp.t(Fp.absolute);
+let initial: (~rootPath: FpExp.t(FpExp.absolute)) => model;
+let setRoot: (~rootPath: FpExp.t(FpExp.absolute), model) => model;
+let root: model => FpExp.t(FpExp.absolute);
 
 let keyPress: (string, model) => model;
 
@@ -32,7 +32,13 @@ type outmsg =
   | GrabFocus;
 
 let update:
-  (~configuration: Oni_Core.Configuration.t, msg, model) => (model, outmsg);
+  (
+    ~config: Config.resolver,
+    ~configuration: Oni_Core.Configuration.t,
+    msg,
+    model
+  ) =>
+  (model, outmsg);
 
 // SUBSCRIPTION
 

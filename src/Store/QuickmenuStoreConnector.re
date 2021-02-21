@@ -265,7 +265,7 @@ let start = () => {
                category: Some("Theme"),
                name: ExtensionContributions.Theme.label(theme),
                command: () =>
-                 ThemeLoadById(ExtensionContributions.Theme.id(theme)),
+                 ThemeSelected(ExtensionContributions.Theme.id(theme)),
                icon: None,
                highlight: [],
                handle: None,
@@ -306,7 +306,7 @@ let start = () => {
         snippetFiles
         |> List.filter_map(
              (snippetFile: Service_Snippets.SnippetFileMetadata.t) => {
-             Fp.baseName(snippetFile.filePath)
+             FpExp.baseName(snippetFile.filePath)
              |> Option.map(filePath => {
                   Actions.{
                     category:

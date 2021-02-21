@@ -4,6 +4,7 @@ open Oni_Core.Utility;
 open Config.Schema;
 
 module CustomDecoders: {
+  let autoClosingPairs: Config.Schema.codec([ | `LanguageDefined | `Never]);
   let whitespace:
     Config.Schema.codec([ | `All | `Boundary | `Selection | `None]);
   let lineNumbers:
@@ -71,6 +72,41 @@ module CustomDecoders: {
           fun
           | `Off => string("off")
           | `On => string("on")
+        ),
+    );
+
+  let autoClosingPairs =
+    custom(
+      ~decode=
+        Json.Decode.(
+          one_of([
+            (
+              "autoClosingPairs.bool",
+              bool
+              |> map(
+                   fun
+                   | false => `Never
+                   | true => `LanguageDefined,
+                 ),
+            ),
+            (
+              "autoClosingPairs.string",
+              string
+              |> map(str => {
+                   switch (String.lowercase_ascii(str)) {
+                   | "never" => `Never
+                   | "languagedefined" => `LanguageDefined
+                   | _ => `Never
+                   }
+                 }),
+            ),
+          ])
+        ),
+      ~encode=
+        Json.Encode.(
+          fun
+          | `Never => string("never")
+          | `LanguageDefined => string("languagedefined")
         ),
     );
 
@@ -227,6 +263,13 @@ open CustomDecoders;
 
 module Codecs = Feature_Configuration.GlobalConfiguration.Codecs;
 
+let autoClosingPairs =
+  setting(
+    "editor.autoClosingBrackets",
+    CustomDecoders.autoClosingPairs,
+    ~default=`LanguageDefined,
+  );
+
 let detectIndentation =
   setting("editor.detectIndentation", bool, ~default=true);
 
@@ -358,6 +401,7 @@ module Experimental = {
 };
 
 let contributions = [
+  autoClosingPairs.spec,
   detectIndentation.spec,
   fontFamily.spec,
   fontLigatures.spec,

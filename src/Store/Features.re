@@ -49,7 +49,7 @@ module Internal = {
       Isolinear.Effect.createWithDispatch(
         ~name="feature.extensions.selectTheme", dispatch => {
         dispatch(
-          ThemeLoadById(Exthost.Extension.Contributions.Theme.id(theme)),
+          ThemeSelected(Exthost.Extension.Contributions.Theme.id(theme)),
         )
       })
     | themes =>
@@ -92,7 +92,7 @@ module Internal = {
       dispatch(Actions.Quit(true))
     );
 
-  let chdir = (path: Fp.t(Fp.absolute)) =>
+  let chdir = (path: FpExp.t(FpExp.absolute)) =>
     Feature_Workspace.Effects.changeDirectory(path)
     |> Isolinear.Effect.map(msg => Actions.Workspace(msg));
 
@@ -174,6 +174,9 @@ module Internal = {
              ~config=resolver,
            );
 
+      let colorTheme =
+        state.colorTheme |> Feature_Theme.configurationChanged(~resolver);
+
       let buffers =
         state.buffers
         |> Feature_Buffers.configurationChanged(~config=resolver);
@@ -199,7 +202,18 @@ module Internal = {
       let (zoom, zoomEffect) =
         Feature_Zoom.configurationChanged(~config=resolver, state.zoom);
       let eff = zoomEffect |> Isolinear.Effect.map(msg => Actions.Zoom(msg));
-      ({...state, buffers, languageSupport, sideBar, layout, zoom}, eff);
+      (
+        {
+          ...state,
+          buffers,
+          languageSupport,
+          sideBar,
+          layout,
+          zoom,
+          colorTheme,
+        },
+        eff,
+      );
     };
 
   let updateMode =
@@ -417,8 +431,10 @@ let update =
     (state', effect);
 
   | FileExplorer(msg) =>
+    let config = Selectors.configResolver(state);
     let (model, outmsg) =
       Feature_Explorer.update(
+        ~config,
         ~configuration=state.configuration,
         msg,
         state.fileExplorer,
@@ -780,6 +796,16 @@ let update =
         Feature_Notification.Effects.dismiss(notification)
         |> Isolinear.Effect.map(msg => Notification(msg)),
       )
+
+    | PaneButton(pane) =>
+      switch (pane) {
+      | Notifications => (
+          state,
+          Feature_Notification.Effects.clear()
+          |> Isolinear.Effect.map(msg => Notification(msg)),
+        )
+      | _ => (state, Isolinear.Effect.none)
+      }
 
     | Effect(eff) => (state, eff |> Isolinear.Effect.map(msg => Pane(msg)))
     };
@@ -1227,7 +1253,7 @@ let update =
       let maybeFullPath =
         buffer
         |> Buffer.getFilePath
-        |> OptionEx.flatMap(Fp.absoluteCurrentPlatform);
+        |> OptionEx.flatMap(FpExp.absoluteCurrentPlatform);
 
       let clearSnippetCacheEffect =
         maybeFullPath
@@ -1272,7 +1298,7 @@ let update =
               state.config,
               state.vim,
             ),
-          ~theme=state.tokenTheme,
+          ~theme=state.colorTheme |> Feature_Theme.tokenColors,
           update,
           state.syntaxHighlights,
         );
@@ -1576,6 +1602,11 @@ let update =
 
     let state = {...state, colorTheme: model'};
     switch (outmsg) {
+    | NotifyError(msg) => (
+        state,
+        Internal.notificationEffect(~kind=Error, msg),
+      )
+
     | OpenThemePicker(_) =>
       let themes =
         state.extensions
@@ -1833,7 +1864,7 @@ let update =
 
       | OpenFile(filePath) => (
           state.layout,
-          Internal.openFileEffect(Fp.toString(filePath)),
+          Internal.openFileEffect(FpExp.toString(filePath)),
         )
 
       | Effect(eff) => (
@@ -2040,7 +2071,8 @@ let update =
 
     | WorkspaceChanged(maybeWorkspaceFolder) =>
       let maybeExplorerFolder =
-        maybeWorkspaceFolder |> OptionEx.flatMap(Fp.absoluteCurrentPlatform);
+        maybeWorkspaceFolder
+        |> OptionEx.flatMap(FpExp.absoluteCurrentPlatform);
       let fileExplorer =
         Feature_Explorer.setRoot(
           ~rootPath=maybeExplorerFolder,

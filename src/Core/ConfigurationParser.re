@@ -52,34 +52,10 @@ let parseVimUseSystemClipboardSetting = json => {
   };
 };
 
-let parseAutoClosingBrackets:
-  Yojson.Safe.t => ConfigurationValues.autoClosingBrackets =
-  json =>
-    switch (json) {
-    | `Bool(true) => LanguageDefined
-    | `Bool(false) => Never
-    | `String(autoClosingBrackets) =>
-      let autoClosingBrackets = String.lowercase_ascii(autoClosingBrackets);
-      switch (autoClosingBrackets) {
-      | "never" => Never
-      | "languagedefined" => LanguageDefined
-      | _ => Never
-      };
-    | _ => Never
-    };
-
 let parseString = (~default="", json) =>
   switch (json) {
   | `String(v) => v
   | _ => default
-  };
-
-let parseAutoReveal = json =>
-  switch (json) {
-  | `Bool(true) => `HighlightAndScroll
-  | `Bool(false) => `NoReveal
-  | `String("focusNoScroll") => `HighlightOnly
-  | _ => `NoReveal
   };
 
 type parseFunction =
@@ -88,20 +64,6 @@ type parseFunction =
 type configurationTuple = (string, parseFunction);
 
 let configurationParsers: list(configurationTuple) = [
-  (
-    "editor.autoClosingBrackets",
-    (config, json) => {
-      ...config,
-      editorAutoClosingBrackets: parseAutoClosingBrackets(json),
-    },
-  ),
-  (
-    "explorer.autoReveal",
-    (config, json) => {
-      ...config,
-      explorerAutoReveal: parseAutoReveal(json),
-    },
-  ),
   (
     "files.exclude",
     (config, json) => {...config, filesExclude: parseStringList(json)},
@@ -112,10 +74,6 @@ let configurationParsers: list(configurationTuple) = [
       ...config,
       workbenchActivityBarVisible: parseBool(json),
     },
-  ),
-  (
-    "workbench.colorTheme",
-    (config, json) => {...config, workbenchColorTheme: parseString(json)},
   ),
   (
     "workbench.iconTheme",

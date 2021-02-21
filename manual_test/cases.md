@@ -192,6 +192,24 @@ __Pass:__
 - [ ] OSX
 - [ ] Linux
 
+## 7.4 Dead Keys
+
+Regresion test for #3157
+
+Prerequisite:
+- Install ENG-INTL keyboard layout
+
+- Switch keyboard layout to English (International)
+- Run Onivim 2
+- Enter dead key (') followed by space -> should type key
+- Press dead key twice (") - platform dependent, should output one or two instances of the key
+- Enter dead key (') followed by composing character (like a) - should get à
+
+__Pass:__
+- [ ] Win
+- [ ] OSX
+- [ ] Linux
+
 # 8. Workspace
 
 ## 8.1 Open Workspace via Command Palette
@@ -214,6 +232,21 @@ __Pass:__
 - [ ] Win
 - [ ] OSX
 - [ ] Linux
+
+## 8.2 Windows-style path handling
+
+### 8.2.1 Verify can `:cd` into a UNC path
+
+Regression test for #3151
+
+- Open Onivim 2
+- `:cd` into a UNC path - for example: `\\\\LOCALHOST\\c$\\oni2`
+- Verify the explorer is refreshed
+- Verify directory nodes can be expanded
+- Verify files can be opened
+
+__Pass:__
+- [ ] Win
 
 # 9. Terminal
 
