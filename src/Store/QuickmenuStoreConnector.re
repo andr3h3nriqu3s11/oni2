@@ -80,17 +80,19 @@ let start = () => {
       ~name="quickmenu.executeVimCommand", dispatch => {
         Log.debug("teste execute:" ++ (quickmenu.inputText |> Component_InputText.value))
         // TODO: Hard-coding "<CR>" and assuming `KeyboardInput` reaches vim seems very sketchy
-        let command = ":" ++ (quickmenu.inputText |> Component_InputText.value);
-        if (quickmenu.variant == Wildmenu(Ex)) {
-          dispatch(
-            Actions.AddToHistory({
-              category: None,
-              name: command,
-              command: () => Actions.VimExecuteCommand({allowAnimation: true, command}),
-              icon: None,
-              highlight: [],
-              handle: None,
-          }))
+        let command = (quickmenu.inputText |> Component_InputText.value);
+        if (!Str.string_match(Str.regexp(" *$"), command, 0)) {
+          if (quickmenu.variant == Wildmenu(Ex)) {
+            dispatch(
+              Actions.AddToHistory({
+                name: command,
+                category: None,
+                command: () => Noop,
+                icon: None,
+                highlight: [],
+                handle: None,
+            }))
+          }
         }
         dispatch(
           Actions.KeyboardInput({isText: false, input: "<CR>"}),
@@ -244,16 +246,16 @@ let start = () => {
       }
 
     | QuickmenuShow(Wildmenu(cmdType)) => {
-      let history = switch cmdType {
+      let history' = switch cmdType {
         | Ex => Some(history)
         | _ => None
       };
         (
           Some({
-            ...Quickmenu.defaults(Wildmenu(cmdType), history),
+            ...Quickmenu.defaults(Wildmenu(cmdType), history'),
             prefix: Some(Internal.prefixFor(cmdType)),
           }),
-          Isolinear.Effect.none,
+          Isolinear.Effect.none
         )
       };
 
