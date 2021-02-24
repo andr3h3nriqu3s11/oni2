@@ -11,15 +11,10 @@ type vimUseSystemClipboard = {
   paste: bool,
 };
 
-type autoReveal = [ | `HighlightAndScroll | `HighlightOnly | `NoReveal];
-
 type t = {
-  explorerAutoReveal: autoReveal,
   workbenchActivityBarVisible: bool,
-  workbenchIconTheme: string,
   workbenchEditorShowTabs: bool,
   workbenchEditorEnablePreview: bool,
-  workbenchStatusBarVisible: bool,
   filesExclude: list(string),
   vsync: Revery.Vsync.t,
   vimUseSystemClipboard,
@@ -33,12 +28,9 @@ type t = {
 };
 
 let default = {
-  explorerAutoReveal: `HighlightAndScroll,
   workbenchActivityBarVisible: true,
   workbenchEditorShowTabs: true,
   workbenchEditorEnablePreview: true,
-  workbenchStatusBarVisible: true,
-  workbenchIconTheme: "vs-seti",
   filesExclude: ["_esy", "node_modules", ".git"],
   vimUseSystemClipboard: {
     yank: true,

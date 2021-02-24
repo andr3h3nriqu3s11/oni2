@@ -92,9 +92,10 @@ module Internal = {
       dispatch(Actions.Quit(true))
     );
 
-  let chdir = (path: FpExp.t(FpExp.absolute)) =>
+  let chdir = (path: FpExp.t(FpExp.absolute)) => {
     Feature_Workspace.Effects.changeDirectory(path)
     |> Isolinear.Effect.map(msg => Actions.Workspace(msg));
+  };
 
   let updateEditor = (~editorId, ~msg, layout) => {
     switch (Feature_Layout.editorById(editorId, layout)) {
@@ -2075,7 +2076,7 @@ let update =
         eff |> Isolinear.Effect.map(msg => Workspace(msg)),
       )
 
-    | WorkspaceChanged(maybeWorkspaceFolder) =>
+    | WorkspaceChanged({path: maybeWorkspaceFolder, shouldFocusExplorer}) =>
       let maybeExplorerFolder =
         maybeWorkspaceFolder
         |> OptionEx.flatMap(FpExp.absoluteCurrentPlatform);
@@ -2104,8 +2105,12 @@ let update =
         );
 
       let state' =
-        {...state, fileExplorer, sideBar}
-        |> FocusManager.push(Focus.FileExplorer);
+        if (shouldFocusExplorer) {
+          {...state, fileExplorer, sideBar}
+          |> FocusManager.push(Focus.FileExplorer);
+        } else {
+          {...state, fileExplorer, sideBar};
+        };
       (state', eff);
     };
 
