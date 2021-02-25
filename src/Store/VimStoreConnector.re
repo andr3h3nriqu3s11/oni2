@@ -504,7 +504,7 @@ let start =
       Log.debugf(m => m("  got %n completions.", Array.length(completions)));
 
       let items =
-        Array.map(
+        ref(Array.map(
           name => {
             Actions.{
               name,
@@ -516,9 +516,14 @@ let start =
             }
           },
           completions,
-        );
+        ));
+      Array.iter((a: Actions.menuItem) => {
+        if (StringEx.startsWith(~prefix=text, a.name)) {
+          items := a |> Array.make(1) |> Array.append(items^);
+        }
+      }, getState().history.ex)
 
-      dispatch(Actions.QuickmenuUpdateFilterProgress(items, Complete));
+      dispatch(Actions.QuickmenuUpdateFilterProgress(items^, Complete));
     };
   };
 
@@ -682,7 +687,16 @@ let start =
     Log.debug(completion);
     Isolinear.Effect.create(~name="vim.applyCommandlineCompletion", () =>
       switch (lastCompletionMeet^) {
-      | None => ()
+      | None =>
+        let completion = completion |> Path.trimTrailingSeparator;
+        let (latestContext: Vim.Context.t, effects) =
+          Core.VimEx.inputString(completion);
+        updateActiveEditorMode(
+          latestContext.subMode,
+          latestContext.mode,
+          effects,
+        );
+        isCompleting := false;
       | Some(position) =>
         isCompleting := true;
         let currentPos = ref(Vim.CommandLine.getPosition());
@@ -692,7 +706,7 @@ let start =
         };
 
         let completion =
-          completion |> Path.trimTrailingSeparator |> StringEx.escapeSpaces;
+          completion |> Path.trimTrailingSeparator;
         let (latestContext: Vim.Context.t, effects) =
           Core.VimEx.inputString(completion);
         updateActiveEditorMode(

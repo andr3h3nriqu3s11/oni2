@@ -746,7 +746,7 @@ let update =
   | AddToHistory(v) => { 
     //TODO: MAKE IT CONFIGURABLE
     let nhistory = ref([||]);
-    state.history |> Array.iter(a => { 
+    state.history.ex |> Array.iter(a => { 
       if (a.name != v.name) {
         nhistory := a |> Array.make(1) |> Array.append(nhistory^);
       } 
@@ -755,7 +755,7 @@ let update =
     | 50 => Array.sub(nhistory^, Array.length(nhistory^) - 1, 1)
     | _ => nhistory^
     };
-    let state = {...state, history: v |> Array.make(1) |> Array.append(history) };
+    let state = {...state, history: {ex: v |> Array.make(1) |> Array.append(history) }};
     (state, Isolinear.Effect.none);}
 
   | Pane(msg) =>

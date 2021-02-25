@@ -188,7 +188,7 @@ let start = () => {
         commands,
         menus,
         contextKeys,
-        history,
+        history: Quickmenu.history,
       )
       : (option(Quickmenu.t), Isolinear.Effect.t(Actions.t)) => {
     switch (action) {
@@ -247,7 +247,7 @@ let start = () => {
 
     | QuickmenuShow(Wildmenu(cmdType)) => {
       let history' = switch cmdType {
-        | Ex => Some(history)
+        | Ex => Some(history.ex)
         | _ => None
       };
         (
@@ -436,26 +436,26 @@ let start = () => {
               } else if (transition < 0) {
                 for (_ in 0 downto transition) {
                   GlobalContext.current().dispatch(
-                    Actions.KeyboardInput({isText: false, input: "<RIGHT>"}),
-                  );
-                };
+                  Actions.KeyboardInput({isText: false, input: "<RIGHT>"}),
+                );
               };
-            | _ => ()
             };
+          | _ => ()
+          };
 
-            Quickmenu.{...state, variant, inputText};
-          },
-          state,
-        ),
-        Isolinear.Effect.none,
-      );
+          Quickmenu.{...state, variant, inputText};
+        },
+        state,
+      ),
+      Isolinear.Effect.none,
+    );
 
-      }
+    }
 
-    | QuickmenuCommandlineUpdated(text, cursor) => (
-        Option.map(
-          state =>
-            Quickmenu.{
+  | QuickmenuCommandlineUpdated(text, cursor) => (
+      Option.map(
+        state =>
+          Quickmenu.{
               ...state,
               inputText:
                 Component_InputText.set(~text, ~cursor, state.inputText),

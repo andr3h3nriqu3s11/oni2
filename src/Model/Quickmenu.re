@@ -10,6 +10,10 @@ type t = {
   focused: option(int) // TODO: Might not be a great idea to use an index to refer to a specific item in an array that changes over time
 }
 
+and history = {
+  ex: array(Actions.menuItem)
+}
+
 and variant =
   Actions.quickmenuVariant =
     | CommandPalette
