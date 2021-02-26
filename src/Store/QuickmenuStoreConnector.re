@@ -75,38 +75,13 @@ let start = () => {
       dispatch(action);
     });
 
-  let executeVimCommandEffect = (state: option(Oni_Model.Quickmenu.t)) => switch state {
-    | Some(quickmenu) => Isolinear.Effect.createWithDispatch(
-      ~name="quickmenu.executeVimCommand", dispatch => {
-        Log.debug("teste execute:" ++ (quickmenu.inputText |> Component_InputText.value))
-        // TODO: Hard-coding "<CR>" and assuming `KeyboardInput` reaches vim seems very sketchy
-        let command = (quickmenu.inputText |> Component_InputText.value);
-        if (!Str.string_match(Str.regexp(" *$"), command, 0)) {
-          if (quickmenu.variant == Wildmenu(Ex)) {
-            dispatch(
-              Actions.AddToHistory({
-                name: command,
-                category: None,
-                command: () => Noop,
-                icon: None,
-                highlight: [],
-                handle: None,
-            }))
-          }
-        }
-        dispatch(
-          Actions.KeyboardInput({isText: false, input: "<CR>"}),
-        )
-    });
-    | _ => Isolinear.Effect.createWithDispatch(
-      ~name="quickmenu.executeVimCommand", dispatch => {
-        // TODO: Hard-coding "<CR>" and assuming `KeyboardInput` reaches vim seems very sketchy
-        dispatch(
-          Actions.KeyboardInput({isText: false, input: "<CR>"}),
-        )
-    });
-
-  };
+  let executeVimCommandEffect = () => Isolinear.Effect.createWithDispatch(
+    ~name="quickmenu.executeVimCommand", dispatch => {
+      // TODO: Hard-coding "<CR>" and assuming `KeyboardInput` reaches vim seems very sketchy
+      dispatch(
+        Actions.KeyboardInput({isText: false, input: "<CR>"}),
+      )
+  });
     
 
   let exitModeEffect =
@@ -194,7 +169,7 @@ let start = () => {
     switch (action) {
     | QuickmenuShow(CommandPalette) => (
         Some({
-          ...Quickmenu.defaults(CommandPalette, None),
+          ...Quickmenu.defaults(CommandPalette, [||]),
           items: Internal.commandPaletteItems(commands, menus, contextKeys),
           focused: Some(0),
           inputText: typeToSearchInput,
@@ -208,7 +183,7 @@ let start = () => {
 
       (
         Some({
-          ...Quickmenu.defaults(EditorsPicker, None),
+          ...Quickmenu.defaults(EditorsPicker, [||]),
           items,
           focused: Some(min(1, Array.length(items) - 1)),
         }),
@@ -217,7 +192,7 @@ let start = () => {
 
     | QuickmenuShow(Extension({id, hasItems, resolver})) => (
         Some({
-          ...Quickmenu.defaults(Extension({id, hasItems, resolver}), None),
+          ...Quickmenu.defaults(Extension({id, hasItems, resolver}), [||]),
           focused: Some(0),
         }),
         Isolinear.Effect.none,
@@ -229,13 +204,13 @@ let start = () => {
           makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
 
         (
-          Some({...Quickmenu.defaults(OpenBuffersPicker, None), items}),
+          Some({...Quickmenu.defaults(OpenBuffersPicker, [||]), items}),
           Isolinear.Effect.none,
         );
       } else {
         (
           Some({
-            ...Quickmenu.defaults(FilesPicker, None),
+            ...Quickmenu.defaults(FilesPicker, [||]),
             filterProgress: Loading,
             ripgrepProgress: Loading,
             inputText: typeToSearchInput,
@@ -247,8 +222,10 @@ let start = () => {
 
     | QuickmenuShow(Wildmenu(cmdType)) => {
       let history' = switch cmdType {
-        | Ex => Some(history.ex)
-        | _ => None
+        | Ex => history.ex
+        | SearchForward
+        | SearchReverse => history.search
+        | _ => [||]
       };
         (
           Some({
@@ -276,7 +253,7 @@ let start = () => {
         |> Array.of_list;
 
       (
-        Some({...Quickmenu.defaults(ThemesPicker(themes), None), items}),
+        Some({...Quickmenu.defaults(ThemesPicker(themes), [||]), items}),
         Isolinear.Effect.none,
       );
 
@@ -299,7 +276,7 @@ let start = () => {
         |> Array.of_list;
 
       (
-        Some({...Quickmenu.defaults(SnippetPicker(snippets), None), items}),
+        Some({...Quickmenu.defaults(SnippetPicker(snippets), [||]), items}),
         Isolinear.Effect.none,
       );
 
@@ -334,7 +311,7 @@ let start = () => {
 
       (
         Some({
-          ...Quickmenu.defaults(SnippetFilePicker(snippetFiles), None),
+          ...Quickmenu.defaults(SnippetFilePicker(snippetFiles), [||]),
           items,
         }),
         Isolinear.Effect.none,
@@ -345,7 +322,7 @@ let start = () => {
         makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
 
       (
-        Some({...Quickmenu.defaults(OpenBuffersPicker, None), items}),
+        Some({...Quickmenu.defaults(OpenBuffersPicker, [||]), items}),
         Isolinear.Effect.none,
       );
 
@@ -355,7 +332,7 @@ let start = () => {
           makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
 
         (
-          Some({...Quickmenu.defaults(OpenBuffersPicker, None), items}),
+          Some({...Quickmenu.defaults(OpenBuffersPicker, [||]), items}),
           Isolinear.Effect.none,
         );
       } else {
@@ -381,7 +358,7 @@ let start = () => {
 
         (
           Some({
-            ...Quickmenu.defaults(FileTypesPicker({bufferId, languages}), None),
+            ...Quickmenu.defaults(FileTypesPicker({bufferId, languages}), [||]),
             items,
           }),
           Isolinear.Effect.none,
@@ -481,7 +458,7 @@ let start = () => {
                 ...
                   Quickmenu.defaults(
                     Extension({id, hasItems: true, resolver}),
-                    None,
+                    [||],
                   ),
                 focused: None,
                 items:
@@ -556,7 +533,8 @@ let start = () => {
       )
     | ListSelect =>
       switch (state) {
-      | Some({variant: Wildmenu(_), _}) => (None, executeVimCommandEffect(state))
+      | Some({variant: Wildmenu(_), _}) => (None, executeVimCommandEffect())
+      
 
       | Some({
           variant: Extension({resolver, _}),

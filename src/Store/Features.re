@@ -5,6 +5,8 @@ open Oni_Core.Utility;
 open Oni_Model;
 open Actions;
 
+module Log = (val Log.withNamespace("Oni2.Store.features"));
+
 module Internal = {
   let notificationEffect = (~kind, message) => {
     Feature_Notification.Effects.create(~kind, message)
@@ -743,20 +745,32 @@ let update =
       );
     (state, eff);
   
-  | AddToHistory(v) => { 
+  | AddToHistory(v, varient) => { 
     //TODO: MAKE IT CONFIGURABLE
+    Log.debug("AddToHistory");
     let nhistory = ref([||]);
-    state.history.ex |> Array.iter(a => { 
+    switch varient {
+    | Wildmenu(Ex) => state.history.ex
+    | Wildmenu(SearchForward) 
+    | Wildmenu(SearchReverse) => state.history.search
+    | _ => [||]
+    } |> Array.iter(a => { 
       if (a.name != v.name) {
         nhistory := a |> Array.make(1) |> Array.append(nhistory^);
       } 
-     })
+    })
     let history = switch (Array.length(nhistory^)) {
     | 50 => Array.sub(nhistory^, Array.length(nhistory^) - 1, 1)
     | _ => nhistory^
     };
-    let state = {...state, history: {ex: v |> Array.make(1) |> Array.append(history) }};
-    (state, Isolinear.Effect.none);}
+
+    let state' = switch varient {
+    | Wildmenu(Ex) => {...state, history: {...state.history, ex: v |> Array.make(1) |> Array.append(history) }}
+    | Wildmenu(SearchForward) 
+    | Wildmenu(SearchReverse) => {...state, history: {...state.history, search: v |> Array.make(1) |> Array.append(history) }}
+    | _ => state
+    };
+    (state', Isolinear.Effect.none);}
 
   | Pane(msg) =>
     let (model, outmsg) =

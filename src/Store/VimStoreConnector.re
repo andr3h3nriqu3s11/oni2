@@ -645,19 +645,18 @@ let start =
         };
         
         Log.debug("teste 10:" ++ string_of_int(List.length(effects)))
-        let checkForEffect = (prefix, text) => switch (List.length(effects)) {
-        | 0 => Log.debug("efectless command: " ++ prefix ++ text)
-        | _ => Log.debug("command: " ++ prefix ++ text)
-        }; 
         switch mode {
         | CommandLine(_) => ()
         | _ => switch previousMode {
-          | CommandLine(v) => switch v.commandType {
-            | Ex => checkForEffect(":", v.text)
-            | SearchForward => checkForEffect("/", v.text)
-            | SearchReverse => checkForEffect("?", v.text)
-            | _ => ()
-          };
+          | CommandLine(v) => dispatch(
+            Actions.AddToHistory({
+            name: v.text,
+            category: None,
+            command: () => Noop,
+            icon: None,
+            highlight: [],
+            handle: None,
+          }, Wildmenu(v.commandType)))
           | _ => ()
           }
         };
