@@ -75,14 +75,14 @@ let start = () => {
       dispatch(action);
     });
 
-  let executeVimCommandEffect = () => Isolinear.Effect.createWithDispatch(
-    ~name="quickmenu.executeVimCommand", dispatch => {
+  let executeVimCommandEffect = 
+    Isolinear.Effect.createWithDispatch(
+      ~name="quickmenu.executeVimCommand", dispatch => {
       // TODO: Hard-coding "<CR>" and assuming `KeyboardInput` reaches vim seems very sketchy
       dispatch(
         Actions.KeyboardInput({isText: false, input: "<CR>"}),
       )
-  });
-    
+    });
 
   let exitModeEffect =
     Isolinear.Effect.createWithDispatch(~name="quickmenu.exitMode", dispatch => {
@@ -227,6 +227,7 @@ let start = () => {
         | SearchReverse => history.search
         | _ => [||]
       };
+      Log.debug("Teste 15:" ++ string_of_int(Array.length(history')));
         (
           Some({
             ...Quickmenu.defaults(Wildmenu(cmdType), history'),
@@ -533,8 +534,7 @@ let start = () => {
       )
     | ListSelect =>
       switch (state) {
-      | Some({variant: Wildmenu(_), _}) => (None, executeVimCommandEffect())
-      
+      | Some({variant: Wildmenu(_), _}) => (None, executeVimCommandEffect)
 
       | Some({
           variant: Extension({resolver, _}),
