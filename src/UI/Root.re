@@ -58,7 +58,7 @@ module Styles = {
 };
 
 let make = (~dispatch, ~state: State.t, ()) => {
-  let State.{uiFont as font, sideBar, zenMode, buffers, editorFont, _} = state;
+  let State.{uiFont as font, sideBar, buffers, editorFont, zen, _} = state;
 
   let theme = Feature_Theme.colors(state.colorTheme);
 
@@ -75,6 +75,8 @@ let make = (~dispatch, ~state: State.t, ()) => {
 
   let statusBarDispatch = msg => dispatch(Actions.StatusBar(msg));
   let messagesDispatch = msg => dispatch(Actions.Messages(msg));
+
+  let zenMode = Feature_Zen.isZen(zen);
 
   let messages = () => {
     <Feature_Messages.View
@@ -112,8 +114,9 @@ let make = (~dispatch, ~state: State.t, ()) => {
     };
 
   let activityBar = () =>
-    if (Selectors.getActiveConfigurationValue(state, c =>
-          c.workbenchActivityBarVisible
+    if (Feature_Configuration.GlobalConfiguration.Workbench.activityBarVisible.
+          get(
+          config,
         )
         && !zenMode) {
       <Dock font={state.uiFont} theme sideBar extensions={state.extensions} />;
@@ -224,6 +227,17 @@ let make = (~dispatch, ~state: State.t, ()) => {
       />
     </View>
     <Overlay>
+      {if (Feature_Quickmenu.isMenuOpen(state.newQuickmenu)) {
+         <Feature_Quickmenu.View
+           theme
+           config
+           model={state.newQuickmenu}
+           dispatch={msg => dispatch(Actions.Quickmenu(msg))}
+           font
+         />;
+       } else {
+         React.empty;
+       }}
       {switch (state.quickmenu) {
        | None => React.empty
        | Some(quickmenu) =>

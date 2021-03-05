@@ -22,12 +22,6 @@ type t =
     })
   | Commands(Feature_Commands.msg(t))
   | Configuration(Feature_Configuration.msg)
-  | ConfigurationParseError(string)
-  | ConfigurationReload
-  | ConfigurationSet([@opaque] Configuration.t)
-  // ConfigurationTransform(fileName, f) where [f] is a configurationTransformer
-  // opens the file [fileName] and applies [f] to the loaded JSON.
-  | ConfigurationTransform(string, configurationTransformer)
   | Decorations(Feature_Decorations.msg)
   | Diagnostics(Feature_Diagnostics.msg)
   | EditorFont(Service_Font.msg)
@@ -83,6 +77,7 @@ type t =
   | FileExplorer(Feature_Explorer.msg)
   | LanguageSupport(Feature_LanguageSupport.msg)
   | MenuBar(Feature_MenuBar.msg)
+  | Quickmenu(Feature_Quickmenu.msg)
   | QuickmenuPaste(string)
   | QuickmenuShow(quickmenuVariant)
   | QuickmenuInput(string)
@@ -116,7 +111,6 @@ type t =
       option([ | `Horizontal | `Vertical | `NewTab]),
       option(CharacterPosition.t),
     )
-  | OpenConfigFile(string)
   | Pasted({
       rawText: string,
       isMultiLine: bool,
@@ -130,15 +124,12 @@ type t =
   // to quit the app. This gives subscriptions the chance to clean up.
   | ReallyQuitting
   | RegisterQuitCleanup(unit => unit)
-  | SearchSetHighlights(int, list(ByteRange.t))
   | SearchClearHighlights(int)
   | SetLanguageInfo([@opaque] Exthost.LanguageInfo.t)
   | SetGrammarRepository([@opaque] Oni_Syntax.GrammarRepository.t)
   | ThemeSelected(string)
   | SetIconTheme([@opaque] IconTheme.t)
   | StatusBar(Feature_StatusBar.msg)
-  | EnableZenMode
-  | DisableZenMode
   | CopyActiveFilepathToClipboard
   | SCM(Feature_SCM.msg)
   | Search(Feature_Search.msg)
@@ -172,7 +163,10 @@ type t =
   | Vim(Feature_Vim.msg)
   | TabPage(Vim.TabPage.effect)
   | Yank({range: [@opaque] VisualRange.t})
+  | Zen(Feature_Zen.msg)
   | Zoom(Feature_Zoom.msg)
+  // TEMPORARY imperative actions
+  | SynchronizeExperimentalViml(list(string))
   | Noop
 and command = {
   commandCategory: option(string),
@@ -201,8 +195,6 @@ and quickmenuVariant =
   | FilesPicker
   | OpenBuffersPicker
   | Wildmenu([@opaque] Vim.Types.cmdlineType)
-  | SnippetPicker(list(Service_Snippets.SnippetWithMetadata.t))
-  | SnippetFilePicker(list(Service_Snippets.SnippetFileMetadata.t))
   | ThemesPicker([@opaque] list(Feature_Theme.theme))
   | FileTypesPicker({
       bufferId: int,

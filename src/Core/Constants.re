@@ -7,7 +7,17 @@
 
 let minimumFontSize = 6.;
 let defaultFontSize = 14.;
+
 let defaultFontFile = "JetBrainsMono-Regular.ttf";
+
+let isDefaultFont = str => {
+  // Before we switched to JetBrains Mono as the default font...
+  // "FiraCode-Regular.ttf" was specified in the default configuration file.
+  // So if we see it again, we should treat it as a default font (#3208)
+  String.equal(str, "FiraCode-Regular.ttf")
+  || String.equal(str, defaultFontFile);
+};
+
 let defaultFontFamily =
   Revery.Font.Family.fromFiles((~weight, ~italic) => {
     switch (weight, italic) {
@@ -88,3 +98,7 @@ let mouseAutoScrollBorder = 75;
 let mouseAutoScrollSpeed = 75.;
 
 let mouseAutoScrollInterval = Revery.Time.milliseconds(50);
+
+let highPriorityDebounceTime = Revery.Time.milliseconds(50);
+let mediumPriorityDebounceTime = Revery.Time.milliseconds(100);
+let lowPriorityDebounceTime = Revery.Time.milliseconds(500);

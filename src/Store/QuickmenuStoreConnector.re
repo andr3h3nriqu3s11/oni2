@@ -259,66 +259,6 @@ let start = () => {
         Isolinear.Effect.none,
       );
 
-    | QuickmenuShow(SnippetPicker(snippets)) =>
-      let items =
-        snippets
-        |> List.map((snippet: Service_Snippets.SnippetWithMetadata.t) => {
-             Actions.{
-               category: Some(snippet.prefix),
-               name: snippet.description,
-               command: () =>
-                 Snippets(
-                   Feature_Snippets.Msg.insert(~snippet=snippet.snippet),
-                 ),
-               icon: None,
-               highlight: [],
-               handle: None,
-             }
-           })
-        |> Array.of_list;
-
-      (
-        Some({...Quickmenu.defaults(SnippetPicker(snippets), [||]), items}),
-        Isolinear.Effect.none,
-      );
-
-    | QuickmenuShow(SnippetFilePicker(snippetFiles)) =>
-      let items =
-        snippetFiles
-        |> List.filter_map(
-             (snippetFile: Service_Snippets.SnippetFileMetadata.t) => {
-             FpExp.baseName(snippetFile.filePath)
-             |> Option.map(filePath => {
-                  Actions.{
-                    category:
-                      Some(
-                        snippetFile.language
-                        |> Option.value(~default="global"),
-                      ),
-                    name:
-                      snippetFile.isCreated
-                        ? Printf.sprintf("Edit %s", filePath)
-                        : Printf.sprintf("Create %s", filePath),
-                    command: () =>
-                      Snippets(
-                        Feature_Snippets.Msg.editSnippetFile(~snippetFile),
-                      ),
-                    icon: None,
-                    highlight: [],
-                    handle: None,
-                  }
-                })
-           })
-        |> Array.of_list;
-
-      (
-        Some({
-          ...Quickmenu.defaults(SnippetFilePicker(snippetFiles), [||]),
-          items,
-        }),
-        Isolinear.Effect.none,
-      );
-
     | QuickmenuShow(OpenBuffersPicker) =>
       let items =
         makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
@@ -615,23 +555,53 @@ let start = () => {
     };
   };
 
-  let updater = (state: State.t, action: Actions.t) => {
-    let (menuState, menuEffect) =
-      menuUpdater(
-        state.quickmenu,
-        action,
-        state.buffers,
-        state.languageInfo,
-        state.iconTheme,
-        state.workspace,
-        CommandManager.current(state),
-        MenuManager.current(state),
-        ContextKeys.all(state),
-        state.history,
-      );
+  let updater = (state: State.t, action: Actions.t) =>
+    // Transition menus to this new-style quickmenu
+    if (Feature_Quickmenu.isMenuOpen(state.newQuickmenu)) {
+      switch (action) {
+      | ListFocusUp => (
+          {
+            ...state,
+            newQuickmenu: Feature_Quickmenu.prev(state.newQuickmenu),
+          },
+          Isolinear.Effect.none,
+        )
+      | ListFocusDown => (
+          {
+            ...state,
+            newQuickmenu: Feature_Quickmenu.next(state.newQuickmenu),
+          },
+          Isolinear.Effect.none,
+        )
+      | ListSelect =>
+        let (newQuickmenu, eff) =
+          Feature_Quickmenu.select(state.newQuickmenu);
+        ({...state, newQuickmenu}, eff);
+      | QuickmenuClose => (
+          {
+            ...state,
+            newQuickmenu: Feature_Quickmenu.cancel(state.newQuickmenu),
+          },
+          Isolinear.Effect.none,
+        )
+      | _ => (state, Isolinear.Effect.none)
+      };
+    } else {
+      let (menuState, menuEffect) =
+        menuUpdater(
+          state.quickmenu,
+          action,
+          state.buffers,
+          state.languageInfo,
+          state.iconTheme,
+          state.workspace,
+          CommandManager.current(state),
+          MenuManager.current(state),
+          ContextKeys.all(state),
+        );
 
-    ({...state, quickmenu: menuState}, menuEffect);
-  };
+      ({...state, quickmenu: menuState}, menuEffect);
+    };
 
   updater;
 };
@@ -668,7 +638,10 @@ let subscriptions = (ripgrep, dispatch) => {
 
   let ripgrep = (workspace, languageInfo, iconTheme, configuration) => {
     let filesExclude =
-      Configuration.getValue(c => c.filesExclude, configuration);
+      Feature_Configuration.Legacy.getValue(
+        c => c.filesExclude,
+        configuration,
+      );
 
     switch (Feature_Workspace.openedFolder(workspace)) {
     | None =>
@@ -724,8 +697,6 @@ let subscriptions = (ripgrep, dispatch) => {
       | EditorsPicker
       | OpenBuffersPicker => [filter(query, quickmenu.items)]
       | ThemesPicker(_) => [filter(query, quickmenu.items)]
-      | SnippetPicker(_) => [filter(query, quickmenu.items)]
-      | SnippetFilePicker(_) => [filter(query, quickmenu.items)]
 
       | Extension({hasItems, _}) =>
         hasItems ? [filter(query, quickmenu.items)] : []
@@ -736,7 +707,7 @@ let subscriptions = (ripgrep, dispatch) => {
             state.workspace,
             state.languageInfo,
             state.iconTheme,
-            state.configuration,
+            state.config,
           )
 
       | FileTypesPicker(_) => [filter(query, quickmenu.items)]

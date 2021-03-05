@@ -5,7 +5,6 @@
  */
 
 open Oni_Core;
-open Oni_Syntax;
 
 module Commands = GlobalCommands;
 let windowCommandCondition = "!insertMode || terminalFocus" |> WhenExpr.parse;
@@ -388,14 +387,12 @@ type windowDisplayMode =
 type t = {
   buffers: Feature_Buffers.model,
   bufferRenderers: BufferRenderers.t,
-  bufferHighlights: BufferHighlights.t,
   changelog: Feature_Changelog.model,
   cli: Oni_CLI.t,
   clipboard: Feature_Clipboard.model,
   colorTheme: Feature_Theme.model,
   commands: Feature_Commands.model(Actions.t),
   config: Feature_Configuration.model,
-  configuration: Configuration.t,
   decorations: Feature_Decorations.model,
   diagnostics: Feature_Diagnostics.model,
   editorFont: Service_Font.font,
@@ -430,9 +427,10 @@ type t = {
   windowDisplayMode,
   titlebarHeight: float,
   workspace: Feature_Workspace.model,
-  zenMode: bool,
+  zen: Feature_Zen.model,
   // State of the bottom pane
   pane: Feature_Pane.model,
+  newQuickmenu: Feature_Quickmenu.model(Actions.t),
   searchPane: Feature_Search.model,
   focus: Focus.stack,
   modal: option(Feature_Modals.model),
@@ -452,7 +450,7 @@ let initial =
       ~initialBufferRenderers,
       ~extensionGlobalPersistence,
       ~extensionWorkspacePersistence,
-      ~getUserSettings,
+      ~configurationLoader,
       ~keybindingsLoader,
       ~workingDirectory,
       ~maybeWorkspace,
@@ -464,7 +462,7 @@ let initial =
     ) => {
   let config =
     Feature_Configuration.initial(
-      ~getUserSettings,
+      ~loader=configurationLoader,
       [
         Feature_AutoUpdate.Contributions.configuration,
         Feature_Buffers.Contributions.configuration,
@@ -480,6 +478,8 @@ let initial =
         Feature_Layout.Contributions.configuration,
         Feature_StatusBar.Contributions.configuration,
         Feature_TitleBar.Contributions.configuration,
+        Feature_Vim.Contributions.configuration,
+        Feature_Zen.Contributions.configuration,
         Feature_Zoom.Contributions.configuration,
       ],
     );
@@ -499,7 +499,6 @@ let initial =
 
   {
     buffers: Feature_Buffers.empty |> Feature_Buffers.add(initialBuffer),
-    bufferHighlights: BufferHighlights.initial,
     bufferRenderers: initialBufferRenderers,
     changelog: Feature_Changelog.initial,
     cli,
@@ -512,7 +511,6 @@ let initial =
       ]),
     commands: Feature_Commands.initial([]),
     config,
-    configuration: Configuration.default,
     decorations: Feature_Decorations.initial,
     diagnostics: Feature_Diagnostics.initial,
     input:
@@ -563,8 +561,10 @@ let initial =
         workingDirectory,
       ),
     fileExplorer: Feature_Explorer.initial(~rootPath=maybeWorkspace),
-    zenMode: false,
+    zen:
+      Feature_Zen.initial(~isSingleFile=List.length(cli.filesToOpen) == 1),
     pane: Feature_Pane.initial,
+    newQuickmenu: Feature_Quickmenu.initial,
     searchPane: Feature_Search.initial,
     focus: Focus.initial,
     modal: None,

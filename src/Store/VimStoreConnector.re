@@ -169,6 +169,8 @@ let start =
       // This is handled by the returned `effects` list -
       // ideally, all the commands here could be factored to be handled in the same way
       | Scroll(_) => ()
+      | SearchStringChanged(_) => ()
+      | SearchClearHighlights => ()
 
       // TODO: Move internal to Feature_Vim
       | Output({cmd, output}) => {
@@ -362,13 +364,6 @@ let start =
     });
 
   let _: unit => unit =
-    Vim.Search.onStopSearchHighlight(() => {
-      let buffer = Vim.Buffer.getCurrent();
-      let id = Vim.Buffer.getId(buffer);
-      dispatch(Actions.SearchClearHighlights(id));
-    });
-
-  let _: unit => unit =
     Vim.onQuit((quitType, force) =>
       switch (quitType) {
       | QuitAll => dispatch(Quit(force))
@@ -559,7 +554,6 @@ let start =
         let highlightList =
           highlights |> Array.to_list |> List.filter(sameLineFilter);
         dispatch(SearchSetHighlights(id, highlightList));
-
       | _ => ()
       };
     });
@@ -746,12 +740,9 @@ let start =
     );
 
   let prevViml = ref([]);
-  let synchronizeViml = configuration =>
-    Isolinear.Effect.create(~name="vim.synchronizeViml", () => {
-      let lines =
-        Core.Configuration.getValue(c => c.experimentalVimL, configuration);
-
-      if (prevViml^ !== lines) {
+  let synchronizeViml = lines =>
+    Isolinear.Effect.create(~name="vim.synchronizeViml", () =>
+      if (prevViml^ != lines) {
         List.iter(
           l => {
             Log.info("Running VimL from config: " ++ l);
@@ -761,8 +752,8 @@ let start =
           lines,
         );
         prevViml := lines;
-      };
-    });
+      }
+    );
 
   let undoEffect =
     Isolinear.Effect.create(~name="vim.undo", () => {
@@ -849,10 +840,7 @@ let start =
 
   let updater = (state: State.t, action: Actions.t) => {
     switch (action) {
-    | ConfigurationSet(configuration) => (
-        state,
-        synchronizeViml(configuration),
-      )
+    | SynchronizeExperimentalViml(lines) => (state, synchronizeViml(lines))
 
     | CommandInvoked({command, _}) =>
       switch (command) {
