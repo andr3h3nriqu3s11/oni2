@@ -88,7 +88,7 @@ type t =
   | QuickmenuInput(string)
   | QuickmenuInputMessage(Component_InputText.msg)
   | QuickmenuCommandlineUpdated(string, int)
-  | QuickmenuUpdateRipgrepProgress(progress)
+  | QuickmenuUpdateRipgrepProgress(progress, option(array(menuItem)), option(quickmenuVariant))
   | QuickmenuUpdateFilterProgress([@opaque] array(menuItem), progress)
   | QuickmenuUpdateExtensionItems({
       id: int,

@@ -503,8 +503,10 @@ let start =
 
       Log.debugf(m => m("  got %n completions.", Array.length(completions)));
 
-      let items =
-        ref(Array.map(
+      let history' = getState().history.ex |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => StringEx.startsWith(~prefix=text, item.name)) |> ArrayLabels.of_list;
+      let items = Array.append((completions |> ArrayLabels.to_list |> ListLabels.filter(~f=name =>
+          (history' |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => String.equal(name, item.name)) |> ArrayLabels.of_list |> Array.length) == 0
+        ) |> ArrayLabels.of_list |> Array.map(
           name => {
             Actions.{
               name,
@@ -514,16 +516,18 @@ let start =
               highlight: [],
               handle: None,
             }
-          },
-          completions,
-        ));
-      Array.iter((a: Actions.menuItem) => {
-        if (StringEx.startsWith(~prefix=text, a.name)) {
-          items := a |> Array.make(1) |> Array.append(items^);
-        }
-      }, getState().history.ex)
+          } )), history');
 
-      dispatch(Actions.QuickmenuUpdateFilterProgress(items^, Complete));
+      dispatch(Actions.QuickmenuUpdateFilterProgress(items, Complete));
+    };
+  };
+
+  let checkSearchCompletions = (~text: string, ~position: int) => {
+    Log.debug("checkSearchCompletions");
+    Log.debug("teste17");
+    if (position == String.length(text) && !StringEx.isEmpty(text)) {
+      let items = getState().history.ex |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => StringEx.startsWith(~prefix=text, item.name)) |> ArrayLabels.of_list;
+      dispatch(Actions.QuickmenuUpdateFilterProgress(items, Complete));
     };
   };
 
@@ -542,6 +546,8 @@ let start =
 
       | SearchForward
       | SearchReverse =>
+        checkSearchCompletions(~position=cursorPosition, ~text);
+
         let highlights = Vim.Search.getHighlights();
 
         let sameLineFilter = (range: ByteRange.t) =>
@@ -681,12 +687,22 @@ let start =
       ignore(Vim.Buffer.openFile(filename): Vim.Buffer.t);
     });
 
-  let applyCompletionEffect = completion => {
+  let applyCompletionEffect = (completion, menuType: Vim.Types.cmdlineType) => {
     Log.debug("teste3");
     Log.debug(completion);
     Isolinear.Effect.create(~name="vim.applyCommandlineCompletion", () =>
       switch (lastCompletionMeet^) {
       | None =>
+        switch menuType {
+        | SearchForward
+        | SearchReverse => 
+          let currentPos = ref(Vim.CommandLine.getPosition());
+          while (currentPos^ > 0) {
+            let _: (Vim.Context.t, list(Vim.Effect.t)) = Vim.key("<bs>");
+            currentPos := Vim.CommandLine.getPosition();
+          };
+        | _ => ()
+        };
         let completion = completion |> Path.trimTrailingSeparator;
         let (latestContext: Vim.Context.t, effects) =
           Core.VimEx.inputString(completion);
@@ -699,13 +715,16 @@ let start =
       | Some(position) =>
         isCompleting := true;
         let currentPos = ref(Vim.CommandLine.getPosition());
+        let completion =
+          completion |> Path.trimTrailingSeparator;
+
+        let position = StringEx.contains(" ", completion) ? 0 : position;
+
         while (currentPos^ > position) {
           let _: (Vim.Context.t, list(Vim.Effect.t)) = Vim.key("<bs>");
           currentPos := Vim.CommandLine.getPosition();
         };
 
-        let completion =
-          completion |> Path.trimTrailingSeparator;
         let (latestContext: Vim.Context.t, effects) =
           Core.VimEx.inputString(completion);
         updateActiveEditorMode(
@@ -859,8 +878,8 @@ let start =
       // IFFY: Depends on the ordering of "updater"s>
       let eff =
         switch (state.quickmenu) {
-        | Some({variant: Wildmenu(_), focused: Some(focused), items, _}) =>
-          try(applyCompletionEffect(items[focused].name)) {
+        | Some({variant: Wildmenu(cmdType), focused: Some(focused), items, _}) =>
+          try(applyCompletionEffect(items[focused].name, cmdType)) {
           | Invalid_argument(_) => Isolinear.Effect.none
           }
         | _ => Isolinear.Effect.none

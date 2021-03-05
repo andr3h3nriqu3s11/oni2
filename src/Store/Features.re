@@ -748,26 +748,24 @@ let update =
   | AddToHistory(v, varient) => { 
     //TODO: MAKE IT CONFIGURABLE
     Log.debug("AddToHistory");
-    let nhistory = ref([||]);
-    switch varient {
+    let history = switch varient {
     | Wildmenu(Ex) => state.history.ex
     | Wildmenu(SearchForward) 
     | Wildmenu(SearchReverse) => state.history.search
+    | FilesPicker => state.history.filesPicker
     | _ => [||]
-    } |> Array.iter(a => { 
-      if (a.name != v.name) {
-        nhistory := a |> Array.make(1) |> Array.append(nhistory^);
-      } 
-    })
-    let history = switch (Array.length(nhistory^)) {
-    | 50 => Array.sub(nhistory^, Array.length(nhistory^) - 1, 1)
-    | _ => nhistory^
+    } |> ArrayLabels.to_list |> ListLabels.filter(~f=a => a.name != v.name) |> ArrayLabels.of_list;
+    
+    let history = switch (Array.length(history)) {
+    | 50 => Array.sub(history, Array.length(history) - 1, 1)
+    | _ => history
     };
 
     let state' = switch varient {
-    | Wildmenu(Ex) => {...state, history: {...state.history, ex: v |> Array.make(1) |> Array.append(history) }}
+    | Wildmenu(Ex) => {...state, history: {...state.history, ex: [|v|] |> Array.append(history) }}
     | Wildmenu(SearchForward) 
-    | Wildmenu(SearchReverse) => {...state, history: {...state.history, search: v |> Array.make(1) |> Array.append(history) }}
+    | Wildmenu(SearchReverse) => {...state, history: {...state.history, search: [|v|] |> Array.append(history) }}
+    | FilesPicker => {...state, history: {...state.history, filesPicker: [|v|] |> Array.append(history) }}
     | _ => state
     };
     (state', Isolinear.Effect.none);}

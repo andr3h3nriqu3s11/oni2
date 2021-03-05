@@ -13,6 +13,7 @@ type t = {
 and history = {
   ex: array(Actions.menuItem),
   search: array(Actions.menuItem),
+  filesPicker: array(Actions.menuItem),
 }
 
 and variant =

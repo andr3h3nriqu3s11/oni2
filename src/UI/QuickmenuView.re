@@ -229,10 +229,7 @@ let make =
        | EditorsPicker => React.empty
        | _ => <input />
        }}
-      {switch (variant) {
-       | Wildmenu(SearchForward | SearchReverse) => React.empty
-       | _ => <dropdown />
-       }}
+       <dropdown />
       {switch (progress) {
        | Complete => <progressBar progress=0. theme /> // TODO: SHould be REact.empty, but a reconciliation bug then prevents the progress bar from rendering
        | InProgress(progress) => <progressBar progress theme />

@@ -577,7 +577,8 @@ let initial =
     registration: Feature_Registration.initial(licenseKeyPersistence),
     history: {
       ex: [||],
-      search: [||]
+      search: [||],
+      filesPicker: [||],
     }
   };
 };
