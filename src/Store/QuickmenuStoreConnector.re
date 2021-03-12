@@ -237,28 +237,6 @@ let start = () => {
           Isolinear.Effect.none
         )
       };
-
-    | QuickmenuShow(ThemesPicker(themes)) =>
-      let items =
-        themes
-        |> List.map((theme: ExtensionContributions.Theme.t) => {
-             Actions.{
-               category: Some("Theme"),
-               name: ExtensionContributions.Theme.label(theme),
-               command: () =>
-                 ThemeSelected(ExtensionContributions.Theme.id(theme)),
-               icon: None,
-               highlight: [],
-               handle: None,
-             }
-           })
-        |> Array.of_list;
-
-      (
-        Some({...Quickmenu.defaults(ThemesPicker(themes), [||]), items}),
-        Isolinear.Effect.none,
-      );
-
     | QuickmenuShow(OpenBuffersPicker) =>
       let items =
         makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
@@ -267,46 +245,6 @@ let start = () => {
         Some({...Quickmenu.defaults(OpenBuffersPicker, [||]), items}),
         Isolinear.Effect.none,
       );
-
-    | QuickmenuShow(FileTypesPicker({bufferId, languages})) =>
-      if (Feature_Workspace.openedFolder(workspace) == None) {
-        let items =
-          makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
-
-        (
-          Some({...Quickmenu.defaults(OpenBuffersPicker, [||]), items}),
-          Isolinear.Effect.none,
-        );
-      } else {
-        let items =
-          languages
-          |> List.map(((fileType, maybeIcon)) => {
-               Actions.{
-                 category: None,
-                 name: fileType,
-                 command: () =>
-                   Buffers(
-                     Feature_Buffers.Msg.fileTypeChanged(
-                       ~bufferId,
-                       ~fileType=Oni_Core.Buffer.FileType.explicit(fileType),
-                     ),
-                   ),
-                 icon: maybeIcon,
-                 highlight: [],
-                 handle: None,
-               }
-             })
-          |> Array.of_list;
-
-        (
-          Some({
-            ...Quickmenu.defaults(FileTypesPicker({bufferId, languages}), [||]),
-            items,
-          }),
-          Isolinear.Effect.none,
-        );
-      }
-
     | QuickmenuPaste(text) => (
         Option.map(
           (Quickmenu.{inputText, _} as state) => {
@@ -559,20 +497,12 @@ let start = () => {
     // Transition menus to this new-style quickmenu
     if (Feature_Quickmenu.isMenuOpen(state.newQuickmenu)) {
       switch (action) {
-      | ListFocusUp => (
-          {
-            ...state,
-            newQuickmenu: Feature_Quickmenu.prev(state.newQuickmenu),
-          },
-          Isolinear.Effect.none,
-        )
-      | ListFocusDown => (
-          {
-            ...state,
-            newQuickmenu: Feature_Quickmenu.next(state.newQuickmenu),
-          },
-          Isolinear.Effect.none,
-        )
+      | ListFocusUp =>
+        let (newQuickmenu, eff) = Feature_Quickmenu.prev(state.newQuickmenu);
+        ({...state, newQuickmenu}, eff);
+      | ListFocusDown =>
+        let (newQuickmenu, eff) = Feature_Quickmenu.next(state.newQuickmenu);
+        ({...state, newQuickmenu}, eff);
       | ListSelect =>
         let (newQuickmenu, eff) =
           Feature_Quickmenu.select(state.newQuickmenu);
@@ -696,7 +626,6 @@ let subscriptions = (ripgrep, dispatch) => {
       | CommandPalette
       | EditorsPicker
       | OpenBuffersPicker => [filter(query, quickmenu.items)]
-      | ThemesPicker(_) => [filter(query, quickmenu.items)]
 
       | Extension({hasItems, _}) =>
         hasItems ? [filter(query, quickmenu.items)] : []
@@ -709,8 +638,6 @@ let subscriptions = (ripgrep, dispatch) => {
             state.iconTheme,
             state.config,
           )
-
-      | FileTypesPicker(_) => [filter(query, quickmenu.items)]
 
       | Wildmenu(_) => []
       };

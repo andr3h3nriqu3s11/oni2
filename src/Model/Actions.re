@@ -127,7 +127,6 @@ type t =
   | SearchClearHighlights(int)
   | SetLanguageInfo([@opaque] Exthost.LanguageInfo.t)
   | SetGrammarRepository([@opaque] Oni_Syntax.GrammarRepository.t)
-  | ThemeSelected(string)
   | SetIconTheme([@opaque] IconTheme.t)
   | StatusBar(Feature_StatusBar.msg)
   | CopyActiveFilepathToClipboard
@@ -195,12 +194,6 @@ and quickmenuVariant =
   | FilesPicker
   | OpenBuffersPicker
   | Wildmenu([@opaque] Vim.Types.cmdlineType)
-  | ThemesPicker([@opaque] list(Feature_Theme.theme))
-  | FileTypesPicker({
-      bufferId: int,
-      languages:
-        list((string, option(Oni_Core.IconTheme.IconDefinition.t))),
-    })
   | Extension({
       id: int,
       hasItems: bool,

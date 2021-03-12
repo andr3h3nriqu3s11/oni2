@@ -1588,6 +1588,7 @@ module Msg: {
   module Workspace: {
     [@deriving show]
     type msg =
+      | SaveAll({includeUntitled: bool})
       | StartFileSearch({
           includePattern: option(string),
           //        includeFolder: option(Oni_Core.Uri.t),
@@ -1749,7 +1750,7 @@ module Request: {
   };
 
   module ExtensionService: {
-    let activateByEvent: (~event: string, Client.t) => unit;
+    let activateByEvent: (~event: string, Client.t) => Lwt.t(unit);
 
     let activate:
       (~extensionId: string, ~reason: ExtensionActivationReason.t, Client.t) =>

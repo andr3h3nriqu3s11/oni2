@@ -34,22 +34,48 @@ module Internal = {
     );
   };
 
-  let setThemesEffect =
-      (~themes: list(Exthost.Extension.Contributions.Theme.t)) => {
+  let showThemePicker = (themes: list(Feature_Theme.theme), state: State.t) => {
+    open Exthost.Extension;
+    let label = theme => Contributions.Theme.label(theme);
+    let id = theme => Contributions.Theme.id(theme);
+
+    let menu =
+      Feature_Quickmenu.Schema.menu(
+        ~onItemFocused=
+          theme => {
+            Actions.Theme(
+              Feature_Theme.Msg.menuPreviewTheme(~themeId=id(theme)),
+            )
+          },
+        ~onItemSelected=
+          theme => {
+            Actions.Theme(
+              Feature_Theme.Msg.menuCommitTheme(~themeId=id(theme)),
+            )
+          },
+        ~toString=theme => "Theme: " ++ label(theme),
+        themes,
+      );
+    {
+      ...state,
+      newQuickmenu: Feature_Quickmenu.show(~menu, state.newQuickmenu),
+    };
+  };
+
+  let setThemes =
+      (
+        ~themes: list(Exthost.Extension.Contributions.Theme.t),
+        state: State.t,
+      ) => {
+    let id = Exthost.Extension.Contributions.Theme.id;
     switch (themes) {
-    | [] => Isolinear.Effect.none
-    | [theme] =>
-      Isolinear.Effect.createWithDispatch(
-        ~name="feature.extensions.selectTheme", dispatch => {
-        dispatch(
-          ThemeSelected(Exthost.Extension.Contributions.Theme.id(theme)),
-        )
-      })
-    | themes =>
-      Isolinear.Effect.createWithDispatch(
-        ~name="feature.extensions.showThemeAfterInstall", dispatch => {
-        dispatch(QuickmenuShow(ThemesPicker(themes)))
-      })
+    | [] => state
+    | [theme] => {
+        ...state,
+        colorTheme:
+          Feature_Theme.setTheme(~themeId=id(theme), state.colorTheme),
+      }
+    | themes => showThemePicker(themes, state)
     };
   };
 
@@ -417,9 +443,10 @@ let update =
           let eff = Internal.openFileEffect("oni://ExtensionDetails");
           (state, eff);
 
-        | SelectTheme({themes}) =>
-          let eff = Internal.setThemesEffect(~themes);
-          (state, eff);
+        | SelectTheme({themes}) => (
+            state |> Internal.setThemes(~themes),
+            Isolinear.Effect.none,
+          )
 
         | UnhandledWindowMovement(movement) => (
             state,
@@ -454,14 +481,7 @@ let update =
             );
           let themes: list(Exthost.Extension.Contributions.Theme.t) =
             Exthost.Extension.Contributions.(contributions.themes);
-          let showThemePickerEffect = Internal.setThemesEffect(~themes);
-          (
-            state,
-            Isolinear.Effect.batch([
-              notificationEffect,
-              showThemePickerEffect,
-            ]),
-          );
+          (state |> Internal.setThemes(~themes), notificationEffect);
         }
       );
     (state', effect);
@@ -730,6 +750,19 @@ let update =
                )
              );
         ({...state, layout: layout'}, Isolinear.Effect.none);
+
+      | ShowMenu(menu) =>
+        let menu' =
+          menu
+          |> Feature_Quickmenu.Schema.map(msg => Actions.LanguageSupport(msg));
+        let quickmenu' =
+          Feature_Quickmenu.show(~menu=menu', state.newQuickmenu);
+        ({...state, newQuickmenu: quickmenu'}, Isolinear.Effect.none);
+
+      | TransformConfiguration(transformer) =>
+        let config' =
+          Feature_Configuration.queueTransform(~transformer, state.config);
+        ({...state, config: config'}, Isolinear.Effect.none);
       }
     );
 
@@ -1099,24 +1132,27 @@ let update =
           |> Feature_Layout.activeEditor
           |> Feature_Editor.Editor.getBufferId;
 
-        let languages =
-          state.languageInfo
-          |> Exthost.LanguageInfo.languages
-          |> List.map(language =>
-               (
-                 language,
-                 Oni_Core.IconTheme.getIconForLanguage(
-                   state.iconTheme,
-                   language,
-                 ),
-               )
-             );
+        // TODO: Port to buffer filetype picker
+        // let languages =
+        //   state.languageInfo
+        //   |> Exthost.LanguageInfo.languages
+        //   |> List.map(language =>
+        //        (
+        //          language,
+        //          Oni_Core.IconTheme.getIconForLanguage(
+        //            state.iconTheme,
+        //            language,
+        //          ),
+        //        )
+        //      );
         (
           state',
           Isolinear.Effect.createWithDispatch(
             ~name="statusBar.fileTypePicker", dispatch => {
             dispatch(
-              Actions.QuickmenuShow(FileTypesPicker({bufferId, languages})),
+              Actions.Buffers(
+                Feature_Buffers.Msg.selectFileTypeClicked(~bufferId),
+              ),
             )
           }),
         );
@@ -1143,6 +1179,13 @@ let update =
 
     switch (outmsg) {
     | Nothing => (state, Effect.none)
+
+    | ShowMenu(menuFn) =>
+      let menu =
+        menuFn(state.languageInfo, state.iconTheme)
+        |> Feature_Quickmenu.Schema.map(msg => Buffers(msg));
+      let quickmenu = Feature_Quickmenu.show(~menu, state.newQuickmenu);
+      ({...state, newQuickmenu: quickmenu}, Isolinear.Effect.none);
 
     | NotifyInfo(msg) => (
         state,
@@ -1423,7 +1466,12 @@ let update =
             Feature_Layout.map(
               editor =>
                 if (Editor.getBufferId(editor) == bufferId) {
-                  Editor.updateBuffer(~update=bufferUpdate, ~buffer, editor);
+                  Editor.updateBuffer(
+                    ~update=bufferUpdate,
+                    ~markerUpdate,
+                    ~buffer,
+                    editor,
+                  );
                 } else {
                   editor;
                 },
@@ -1690,6 +1738,14 @@ let update =
 
     let state = {...state, colorTheme: model'};
     switch (outmsg) {
+    | ConfigurationTransform(transformer) => (
+        {
+          ...state,
+          config:
+            Feature_Configuration.queueTransform(~transformer, state.config),
+        },
+        Isolinear.Effect.none,
+      )
     | NotifyError(msg) => (
         state,
         Internal.notificationEffect(~kind=Error, msg),
@@ -1703,11 +1759,7 @@ let update =
            })
         |> List.flatten;
 
-      let eff =
-        Isolinear.Effect.createWithDispatch(~name="menu", dispatch => {
-          dispatch(Actions.QuickmenuShow(ThemesPicker(themes)))
-        });
-      (state, eff);
+      (state |> Internal.showThemePicker(themes), Isolinear.Effect.none);
     | Nothing => (state, Isolinear.Effect.none)
     | ThemeChanged(_colorTheme) =>
       let config = Selectors.configResolver(state);
