@@ -226,11 +226,11 @@ let start = () => {
         | Ex => history.ex
         | SearchForward
         | SearchReverse => history.search
-        | _ => [||]
+        | _ => []
       };
         (
           Some({
-            ...Quickmenu.defaults(Wildmenu(cmdType), history'),
+            ...Quickmenu.defaults(Wildmenu(cmdType), history' |> Array.of_list),
             prefix: Some(Internal.prefixFor(cmdType)),
           }),
           Isolinear.Effect.none
@@ -492,6 +492,7 @@ let start = () => {
           CommandManager.current(state),
           MenuManager.current(state),
           ContextKeys.all(state),
+          state.history,
         );
 
       ({...state, quickmenu: menuState}, menuEffect);

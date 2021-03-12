@@ -820,20 +820,18 @@ let update =
     | Wildmenu(Ex) => state.history.ex
     | Wildmenu(SearchForward) 
     | Wildmenu(SearchReverse) => state.history.search
-    | FilesPicker => state.history.filesPicker
-    | _ => [||]
-    } |> ArrayLabels.to_list |> ListLabels.filter(~f=a => a.name != v.name) |> ArrayLabels.of_list;
+    | _ => []
+    } |> ListLabels.filter(~f=a => a.name != v.name) |> ArrayLabels.of_list;
     
     let history = switch (Array.length(history)) {
     | 50 => Array.sub(history, Array.length(history) - 1, 1)
     | _ => history
-    };
+    } |> Array.to_list;
 
     let state' = switch varient {
-    | Wildmenu(Ex) => {...state, history: {...state.history, ex: [|v|] |> Array.append(history) }}
+    | Wildmenu(Ex) => {...state, history: {...state.history, ex: [v] |> List.append(history) }}
     | Wildmenu(SearchForward) 
-    | Wildmenu(SearchReverse) => {...state, history: {...state.history, search: [|v|] |> Array.append(history) }}
-    | FilesPicker => {...state, history: {...state.history, filesPicker: [|v|] |> Array.append(history) }}
+    | Wildmenu(SearchReverse) => {...state, history: {...state.history, search: [v] |> List.append(history) }}
     | _ => state
     };
     (state', Isolinear.Effect.none);}

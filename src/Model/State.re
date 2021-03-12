@@ -576,9 +576,8 @@ let initial =
     autoUpdate: Feature_AutoUpdate.initial,
     registration: Feature_Registration.initial(licenseKeyPersistence),
     history: {
-      ex: [||],
-      search: [||],
-      filesPicker: [||],
+      ex: [],
+      search: [],
     }
   };
 };

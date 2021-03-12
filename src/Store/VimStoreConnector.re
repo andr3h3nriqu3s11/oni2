@@ -169,9 +169,11 @@ let start =
       // This is handled by the returned `effects` list -
       // ideally, all the commands here could be factored to be handled in the same way
       | Scroll(_) => ()
-      | SearchStringChanged(_) => ()
+      | SearchStringChanged(s) => switch s {
+        | Some(s) => dispatch(Actions.QuickmenuUpdateFilterProgress(getState().history.search |> ListLabels.filter(~f=(item: Actions.menuItem) => StringEx.startsWith(~prefix=s, item.name)) |> ArrayLabels.of_list, Complete));
+        | _ => ()
+      }
       | SearchClearHighlights => ()
-
       // TODO: Move internal to Feature_Vim
       | Output({cmd, output}) => {
           dispatch(Actions.Vim(Feature_Vim.Output({cmd, output})));
@@ -503,7 +505,7 @@ let start =
 
       Log.debugf(m => m("  got %n completions.", Array.length(completions)));
 
-      let history' = getState().history.ex |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => StringEx.startsWith(~prefix=text, item.name)) |> ArrayLabels.of_list;
+      let history' = getState().history.ex |> ListLabels.filter(~f=(item: Actions.menuItem) => StringEx.startsWith(~prefix=text, item.name)) |> ArrayLabels.of_list;
       let items = Array.append((completions |> ArrayLabels.to_list |> ListLabels.filter(~f=name =>
           (history' |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => String.equal(name, item.name)) |> ArrayLabels.of_list |> Array.length) == 0
         ) |> ArrayLabels.of_list |> Array.map(
@@ -522,15 +524,6 @@ let start =
     };
   };
 
-  let checkSearchCompletions = (~text: string, ~position: int) => {
-    Log.debug("checkSearchCompletions");
-    Log.debug("teste17");
-    if (position == String.length(text) && !StringEx.isEmpty(text)) {
-      let items = getState().history.ex |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => StringEx.startsWith(~prefix=text, item.name)) |> ArrayLabels.of_list;
-      dispatch(Actions.QuickmenuUpdateFilterProgress(items, Complete));
-    };
-  };
-
   let _: unit => unit =
     Vim.CommandLine.onUpdate(({text, position: cursorPosition, cmdType}) => {
       dispatch(Actions.QuickmenuCommandlineUpdated(text, cursorPosition));
@@ -544,21 +537,6 @@ let start =
         isCompleting^
           ? () : checkCommandLineCompletions(~position=cursorPosition, ~text);
 
-      | SearchForward
-      | SearchReverse =>
-        checkSearchCompletions(~position=cursorPosition, ~text);
-
-        let highlights = Vim.Search.getHighlights();
-
-        let sameLineFilter = (range: ByteRange.t) =>
-          EditorCoreTypes.LineNumber.(range.start.line == range.stop.line);
-
-        let buffer = Vim.Buffer.getCurrent();
-        let id = Vim.Buffer.getId(buffer);
-
-        let highlightList =
-          highlights |> Array.to_list |> List.filter(sameLineFilter);
-        dispatch(SearchSetHighlights(id, highlightList));
       | _ => ()
       };
     });

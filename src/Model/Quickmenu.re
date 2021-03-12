@@ -11,8 +11,8 @@ type t = {
 }
 
 and history = {
-  ex: array(Actions.menuItem),
-  search: array(Actions.menuItem),
+  ex: list(Actions.menuItem),
+  search: list(Actions.menuItem),
 }
 
 and variant =
