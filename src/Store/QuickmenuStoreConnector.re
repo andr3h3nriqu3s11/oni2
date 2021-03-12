@@ -76,7 +76,7 @@ let start = () => {
       dispatch(action);
     });
 
-  let executeVimCommandEffect = 
+  let executeVimCommandEffect =
     Isolinear.Effect.createWithDispatch(
       ~name="quickmenu.executeVimCommand", dispatch => {
       // TODO: Hard-coding "<CR>" and assuming `KeyboardInput` reaches vim seems very sketchy
@@ -205,13 +205,13 @@ let start = () => {
           makeBufferCommands(workspace, languageInfo, iconTheme, buffers);
 
         (
-          Some({...Quickmenu.defaults(OpenBuffersPicker, history.filesPicker), items}),
+          Some({...Quickmenu.defaults(OpenBuffersPicker, [||]), items}),
           Isolinear.Effect.none,
         );
       } else {
         (
           Some({
-            ...Quickmenu.defaults(FilesPicker, history.filesPicker),
+            ...Quickmenu.defaults(FilesPicker, [||]),
             filterProgress: Loading,
             ripgrepProgress: Loading,
             inputText: typeToSearchInput,
@@ -228,7 +228,6 @@ let start = () => {
         | SearchReverse => history.search
         | _ => [||]
       };
-      Log.debug("Teste 15:" ++ string_of_int(Array.length(history')));
         (
           Some({
             ...Quickmenu.defaults(Wildmenu(cmdType), history'),
@@ -268,9 +267,7 @@ let start = () => {
         Isolinear.Effect.none,
       )
 
-    | QuickmenuInputMessage(msg) => {
-        Log.debug("teste");
-        (
+    | QuickmenuInputMessage(msg) => (
         Option.map(
           (Quickmenu.{variant, inputText, _} as state) => {
             switch (variant) {
@@ -305,9 +302,7 @@ let start = () => {
         state,
       ),
       Isolinear.Effect.none,
-    );
-
-    }
+    )
 
   | QuickmenuCommandlineUpdated(text, cursor) => (
       Option.map(
@@ -322,43 +317,13 @@ let start = () => {
         Isolinear.Effect.none,
       )
 
-    | QuickmenuUpdateRipgrepProgress(progress, items, v) => {
-      switch items {
-      | Some(items) => switch v {
-        | Some(FilesPicker) => {
-          
-          let items' = items |> ArrayLabels.to_list |> ListLabels.filter(~f=(a: Actions.menuItem) =>
-            (history.filesPicker |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => String.equal(a.name, item.name)) |> ArrayLabels.of_list |> Array.length) == 0
-          ) |> ArrayLabels.of_list;
-          let items = history.filesPicker |> ArrayLabels.to_list |> ListLabels.filter(~f=(a: Actions.menuItem) =>
-            (items |> ArrayLabels.to_list |> ListLabels.filter(~f=(item: Actions.menuItem) => String.equal(a.name, item.name)) |> ArrayLabels.of_list |> Array.length) != 0
-          ) |> ArrayLabels.of_list |> Array.append(items');
-
-          (
-          Option.map(
-            (state: Quickmenu.t) => {...state, items: items , ripgrepProgress: progress},
-            state,
-          ),
-          Isolinear.Effect.none,
-        )
-        }
-        | _ => (
-          Option.map(
-            (state: Quickmenu.t) => {...state, ripgrepProgress: progress},
-            state,
-          ),
-          Isolinear.Effect.none,
-        )
-        };
-      | None => (
+    | QuickmenuUpdateRipgrepProgress(progress) => (
         Option.map(
           (state: Quickmenu.t) => {...state, ripgrepProgress: progress},
           state,
         ),
         Isolinear.Effect.none,
       )
-      };
-    }
 
     | QuickmenuUpdateExtensionItems({items, _}) => (
         Option.map(
@@ -426,9 +391,7 @@ let start = () => {
         Isolinear.Effect.none,
       )
 
-    | ListFocusDown => {
-      Log.debug("teste20");
-      (
+    | ListFocusDown => (
         Option.map(
           (state: Quickmenu.t) =>
             {
@@ -442,7 +405,8 @@ let start = () => {
           state,
         ),
         Isolinear.Effect.none,
-      )}
+      )
+
     | ListSelect =>
       switch (state) {
       | Some({variant: Wildmenu(_), _}) => (None, executeVimCommandEffect)
@@ -603,15 +567,13 @@ let subscriptions = (ripgrep, dispatch) => {
           ~ripgrep,
           ~onUpdate=
             items => {
-              let items = items
-              |> List.map(stringToCommand(languageInfo, iconTheme));
-              items |> addItems;
+              items
+              |> List.map(stringToCommand(languageInfo, iconTheme))
+              |> addItems;
 
-              Log.debug("teste69");
-
-              dispatch(Actions.QuickmenuUpdateRipgrepProgress(Loading, Some(items |> Array.of_list), Some(FilesPicker)));
+              dispatch(Actions.QuickmenuUpdateRipgrepProgress(Loading));
             },
-          ~onComplete=() => Actions.QuickmenuUpdateRipgrepProgress(Complete, None, None),
+          ~onComplete=() => Actions.QuickmenuUpdateRipgrepProgress(Complete),
           ~onError=_ => Actions.Noop,
         ),
       ];
